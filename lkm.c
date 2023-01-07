@@ -8,7 +8,7 @@
 // Values of the GPIO pins and initialisation for variables
 
 
-static bool	State = 0;
+
 
 static unsigned int OffLed = 27;
 static unsigned int GreenLed = 24;
@@ -19,12 +19,13 @@ static unsigned int Button = 17;
 static unsigned int Irqnum = 0;
 static unsigned int Counter = 0;
 
-unsigned int LastReportedValue = 0;
+ long LastReportedValue = 0;
+bool IsEnabled = 0;
 unsigned int Response = 0; // This could be a bool??
 
 //buffer for the interaction between the user and the dev file
 static char buffer[255];
-static int pointer_to_buffer;
+static int buffer_pointer = 0;
 
 //things for creating the dev file
 static dev_t device_number;
@@ -33,6 +34,38 @@ static struct cdev device_itself;
 
 #define DRIVER_NAME "cloudLED"
 #define DRIVER_CLASS "cloudLEDClass"
+
+
+//Function to set the correct LEDs on and off based on the last reported value
+void setLEDValues(void)
+{
+	//set green LED on 
+	gpio_set_value(GreenLed,1);
+	if (LastReportedValue >= 50)
+	{
+		// set yellow LED on
+		gpio_set_value(YellowLed,1);
+		if (LastReportedValue >= 75)
+		{
+			//set red LED on
+			gpio_set_value(RedLed,1);
+		}
+		else
+		{
+			// set red LED off
+			gpio_set_value(RedLed,0);
+		}
+	}
+	else
+	{
+		//set yellow LED off
+		gpio_set_value(YellowLed,0);
+		gpio_set_value(RedLed,0);
+	}
+
+
+}
+
 
 // Function for handling the dev file being opened
 static int user_opened_the_file(struct inode *dev_file, struct file *instance)
@@ -48,31 +81,55 @@ static int user_closed_the_file(struct inode *dev_file, struct file *instance)
 	return 0;
 }
 
+
 //Function for handling reads of the device file
 static ssize_t user_read_the_file(struct file *dev_file, char *destination_buffer, size_t size_of_buffer, loff_t *offset)
 {
-	//We will be sending a value that can be represented by a bool, thus we can only write 1 byte of data to the file 
-	// 1 - the cloud functionality should be triggered
-	// 0 - the could functionality should not be triggered
-	printk(KERN_INFO "The file has been read!");
-	copy_to_user(destination_buffer,buffer,4); // we copy the data that we had to the user, we only care about copying a single byte of the data.
 
-	//this seems a little bit hacky, todo: patch up later
-	return 4; 
+	// todo redo it to also include the reported value
+
+	unsigned int Decision = 0;	
+	if (LastReportedValue > 75 && IsEnabled )
+	{
+		Decision = 1;
+		// Write a 1 back to the user application so cloud can be started
+		printk("Decision: Engage cloud functionality");
+	}
+	else
+	{
+		Decision = 0;
+		
+		printk("Decision: Do not engage cloud functionality");
+		//Write a 0 back to the user application, nothing should happen afterwards
+	
+	}
+	
+	copy_to_user(destination_buffer,buffer,sizeof(buffer));
+	return sizeof(buffer);
 }
 
 //Function for handling writes to the device file
 static ssize_t user_wrote_the_file(struct file *dev_file, const char *source_buffer, size_t size_of_buffer, loff_t *offset)
 {
+	int copied, not_copied, delta;
+	copied = min(size_of_buffer, sizeof(buffer));
+	
+	printk(KERN_INFO "The file has been written to! \n");
+	not_copied = copy_from_user(buffer,source_buffer,copied);
 
-	//as we only ever want to read a value between 0 and 100, we again can get away with operating with a single byte of data
-	printk(KERN_INFO "The file has been written to!");
-	copy_from_user(buffer,source_buffer,4);
-
-	return 4;
+	buffer_pointer = copied;
+	delta = copied - not_copied;
+	
+	printk("Write value " );
+	printk(buffer);
+	kstrtol(buffer,10,&LastReportedValue); //write the number from the buffer into LastReportedValue
+	setLEDValues();
+	return delta;
 
 
 }
+
+
 
 // This struct maps the functions we wrote to the operations that can be done on the dev file
 
@@ -91,18 +148,11 @@ static struct file_operations file_ops = {
 // Interrupt handler
 static irq_handler_t piirq_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
     /* Toogle LED */
-   gpio_set_value(OffLed, State);
-   State = !State;
-   gpio_set_value(GreenLed, State);
-   gpio_set_value(YellowLed, State);
-   gpio_set_value(RedLed, State);
-   
-   printk(KERN_INFO "piirq: Offled state is : [%d] ", gpio_get_value(OffLed));
-   printk(KERN_INFO "piirq: button state is : [%d] ", gpio_get_value(Button));
-
-   Counter++;
+   gpio_set_value(OffLed, IsEnabled); // set the LED to the opposite of the function state (LED is ON when cloud func is OFF)
+   IsEnabled = !IsEnabled; // enable or disable the cloud functionality
    return (irq_handler_t) IRQ_HANDLED;
 }
+
 //Function used to reduce the lines of code when initialising multiple GPIO pins
 void init_single_gpio(unsigned int pin, char * string, int start_value)
 {
