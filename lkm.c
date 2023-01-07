@@ -88,24 +88,25 @@ static ssize_t user_read_the_file(struct file *dev_file, char *destination_buffe
 
 	// todo redo it to also include the reported value
 
-	unsigned int Decision = 0;	
+	char Decision = 0;	
 	if (LastReportedValue > 75 && IsEnabled )
 	{
-		Decision = 1;
+		Decision = 0x31;
 		// Write a 1 back to the user application so cloud can be started
 		printk("Decision: Engage cloud functionality");
 	}
 	else
 	{
-		Decision = 0;
+		Decision = 0x30;
 		
 		printk("Decision: Do not engage cloud functionality");
 		//Write a 0 back to the user application, nothing should happen afterwards
 	
 	}
-	
-	copy_to_user(destination_buffer,buffer,sizeof(buffer));
-	return sizeof(buffer);
+	static char result_buf[255] ;
+	result_buf[1] = Decision;
+	copy_to_user(destination_buffer,result_buf,sizeof(result_buf));
+	return sizeof(result_buf);
 }
 
 //Function for handling writes to the device file
