@@ -1,0 +1,12 @@
+.lkm.ko.cmd
+.lkm.mod.cmd
+.lkm.mod.o.cmd
+.lkm.o.cmd
+lkm.ko
+lkm.mod
+lkm.mod.c
+lkm.mod.o
+.vscode/c_cpp_properties.json
+modules.order
+Module.symvers
+lkm.o
