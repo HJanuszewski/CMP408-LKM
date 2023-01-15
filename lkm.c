@@ -11,7 +11,7 @@
 
 
 static unsigned int OffLed = 27;
-static unsigned int GreenLed = 24;
+static unsigned int GreenLed = 14;
 static unsigned int YellowLed = 15;
 static unsigned int RedLed = 4;
 

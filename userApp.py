@@ -15,8 +15,8 @@ class CPUsage:
 cpu = CPUsage()
 LOG_BUCKET_NAME = 'cmp408test'
 AUTO_SCALING_GROUP_NAME = "MyScaler"
-IsCloudLive = False
-
+IS_CLOUD_LIVE = False
+ELB_URL = "http://aws-fill-me-later.com"
 
 
 # this function will grab the LKMs decision on wether cloud functionality should be on
@@ -86,6 +86,16 @@ def actionLoop(mins):
         time.sleep(10) # only activcate once every 10 secs
 
 
+def setDNStoAWSELB():
+    print("sending the request to change the DNS record")
+    #do stuff
+    return
+
+def setDNStoRPI():
+    print("setting the DNS record back to the RPI")
+    # do stuff
+    return 
+
 def writeLogDaemonThread():
     time.sleep(10) # sleep for a few seconds at the start of the thread to allow the cpu object to populate 
     s3 = boto3.resource('s3')
@@ -106,22 +116,37 @@ def writeLogDaemonThread():
         s3.Bucket(LOG_BUCKET_NAME).put_object(Key=str(tsa+".log"),Body=log) # send over the log file to S3 bucket, create a new log file
 
 
-
+def alertWatchingThread():
+    print("starting to check for combined alert")
+    CW = boto3.client('cloudwatch') #check w documentation
+    
+    #check the combined alarm (1 instance + lowCPU), can 'decomission' the cloud if triggered
+    global IS_CLOUD_LIVE
+    while IS_CLOUD_LIVE: #until the CloudOffAlarm triggers, signaling the cloud to be switched off
+        print("could watching")
+        response = CW.describe_alarms(AlarmNames=['CloudOffAlarm'])
+        if response['StateValue'] == 'ALARM':
+            #switch off auto scaled instances by setting desired capacity to 0
+            scaler = boto3.client('autoscaling')
+            response = scaler.set_desired_capacity(AutoScalingGroupName=AUTO_SCALING_GROUP_NAME,DesiredCapacity=0) 
+            IS_CLOUD_LIVE = False # break out of loop and allow cloud to be started again at a later time
+            setDNStoRPI() #regain the DNS record used
+        time.sleep(180) # check every 3 minutes
+    return
 
 
 # this funtion will start the AWS cloud functionality of the system when instructed to do so by the LKM
 def startCloud():
-    global IsCloudLive
+    global IS_CLOUD_LIVE
     print("Cloud is necessary")
-    if  IsCloudLive:
+    if  IS_CLOUD_LIVE:
         print("Cloud should be already running/starting")
         
     else:
-        IsCloudLive = True
+        IS_CLOUD_LIVE = True
         print("Starting the cloud")
-        
-        #make a request to namecheap API to forward the DNS record to AWS load balancer
-        
+        setDNStoAWSELB() # change the DNS record to point to the Elastic Load Balancer
+
         # set the Auto Scaling Group's Desired capacity to 1 (from the resting state of 0)
         scaler = boto3.client('autoscaling')
         response = scaler.set_desired_capacity(AutoScalingGroupName=AUTO_SCALING_GROUP_NAME,DesiredCapacity=1)
@@ -130,7 +155,7 @@ def startCloud():
     return
 
 def main():
-    IsCloudLive = False
+   
     args = sys.argv
     if (len(args) != 2):
         print("Usage: userApp.py [1,5,15]") # provide an error message if no arguments were specified (or too many were specified)
