@@ -182,7 +182,7 @@ int __init module_start(void){
 
     	Irqnum = gpio_to_irq(Button);
     	
- 	 result = request_irq(Irqnum,(irq_handler_t) irq_handling,IRQF_TRIGGER_RISING,"irq_handler",NULL);
+ 	 result = request_irq(Irqnum,(irq_handler_t) irq_handler,IRQF_TRIGGER_RISING,"irq_handler",NULL);
 
 	// Get the device number assigned and create the dev file for interacting with the userspace 
 	if (alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME) < 0)
@@ -222,7 +222,7 @@ int __init module_start(void){
 	}
 
 
-    printk("piirq loaded\n");
+    printk("module loaded\n");
     return 0;
 }
 void __exit module_cleanup(void){
