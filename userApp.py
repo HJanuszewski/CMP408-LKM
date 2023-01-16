@@ -4,7 +4,7 @@ import sys #required for CLI arguments
 import threading #for logging and alert checking threads
 import time  #for sleep 
 import requests # for calls to the namecheap API
-
+from pprint import pprint
 
 # class to neatly store all three values fronm the /proc/loadavg file
 class CPUsage:
@@ -13,27 +13,49 @@ class CPUsage:
     FifteenMinutes = 0
 
 #class containing fields necessary for Namechaeap API
-class NCAPI:
-    apiuser = ""
-    apikey = ""
-    username = ""
-    Command = ""
-    ClientIp = ""
-    SLD = ""
-    TLD = ""
-    HostName1 = ""
-    RecordType = ""
-    Address1 = ""
-    TTL1 = 0
-
-
+api = {
+    'apiuser' : "",
+    'apikey': "",
+    'username' : "",
+    'Command' : "",
+    'ClientIp' : "",
+    'SLD' : "",
+    'TLD' : "",
+    'HostName1' : "",
+    'RecordType' : "",
+    'Address1' : "",
+    'TTL1' : 0
+    }
+apiURL = ""
 cpu = CPUsage()
-api = NCAPI()
+
 LOG_BUCKET_NAME = 'cmp408test'
 AUTO_SCALING_GROUP_NAME = "MyScaler"
 IS_CLOUD_LIVE = False
 ELB_URL = "http://aws-fill-me-later.com"
+LOCAL_IP = "82.40.72.174"
 
+def setupDNSAPI():
+    global api
+    global apiURL
+    file = open("./.APIcreds","r") # it is not good secure to leave API keys in code, thus they will be read from a file at runtime
+    string = file.read()
+    file.close()
+    split =  string.split("\n") # split the string read from the file on a new line
+    #assign the values of the global api object values read from hte file
+    apiURL = split[0]
+    api['apiuser'] = split[1]
+    api['apikey'] = split[2]
+    api['username'] = split[3]
+    api['Command'] = split[4]
+    api['ClientIp'] = split[5]
+    api['SLD'] = split[6]
+    api['TLD'] = split[7]
+    api['HostName1'] = split[8]
+    api['RecordType'] = split[9]
+    api['Address1'] = split[10]
+    api['TTL1'] = split[11]
+    return
 
 # this function will grab the LKMs decision on wether cloud functionality should be on
 # 1 - on 
@@ -104,14 +126,20 @@ def actionLoop(mins):
 
 def setDNStoAWSELB():
     print("sending the request to change the DNS record")
-    url = "https://api.namecheap.com/xml.response"
-
-    #do stuff
+    global api
+    global ELB_URL
+    api["RecordType"] = "CNAME"
+    api["Address1"] = ELB_URL
+    req = requests.get(url = apiURL, params = api)
     return
 
 def setDNStoRPI():
     print("setting the DNS record back to the RPI")
-    # do stuff
+    global api
+    global LOCAL_IP
+    api["RecordType"] = "A"
+    api["Address1"] = LOCAL_IP
+    req = requests.get(url = apiURL, params = api)
     return 
 
 def writeLogDaemonThread():
@@ -179,8 +207,10 @@ def main():
         print("Usage: userApp.py [1,5,15]") # provide an error message if no arguments were specified (or too many were specified)
         return -1
     else:
-        print(int(args[1]))
-        actionLoop(int(args[1]))
+        print("testing")
+        #actionLoop(int(args[1]))
+        setupDNSAPI()
+        pprint(vars(api))
         
     # either start the loop from here, or use a thread to do it instead
        

@@ -10,3 +10,4 @@ lkm.mod.o
 modules.order
 Module.symvers
 lkm.o
+.APIcreds
