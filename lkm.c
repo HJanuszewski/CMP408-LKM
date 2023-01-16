@@ -17,9 +17,9 @@ static unsigned int RedLed = 4;
 
 static unsigned int Button = 17;
 static unsigned int Irqnum = 0;
-static unsigned int Counter = 0;
 
- long LastReportedValue = 0;
+
+long LastReportedValue = 0;
 bool IsEnabled = 0;
 unsigned int Response = 0; // This could be a bool??
 
@@ -182,7 +182,7 @@ int __init piirq_init(void){
    }
 
 	/* Make it appear in /sys/class/gpio/gpio16 for echo 0 > value */
-    	init_single_gpio(OffLed,"OffLed",1);
+    init_single_gpio(OffLed,"OffLed",1);
 	init_single_gpio(GreenLed,"GreenLed",0);
 	init_single_gpio(YellowLed,"YellowLed",0);
 	init_single_gpio(RedLed,"RedLed",0);
@@ -203,23 +203,42 @@ int __init piirq_init(void){
 		  NULL);
 
 	// Get the device number assigned and create the dev file for interacting with the userspace 
-	alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME); //todo add error checking 
-	printk("hopefully device was created with the numbers");
-
-	//Initialise device file 
-	cdev_init(&device_itself,&file_ops); //todo add error checking
-
-	// Register the device file
-	cdev_add(&device_itself,device_number,1); //todo add error checking
+	if (alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME) < 0)
+	{
+		printk(KERN_WARNING"Error occured when assigning device number");
+		return -1;
+	} 
 
 	//Create the device class
-	device_class = class_create(THIS_MODULE,DRIVER_CLASS); // todo add error checking
-
+	device_class = class_create(THIS_MODULE,DRIVER_CLASS); 
+	if (device_class == NULL)
+	{
+		printk(KERN_WARNING"The class was not registered properly");
+		unregister_chrdev(device_number,DRIVER_NAME);
+		return -1;
+	}
 	//Create the device file itself
-	device_create(device_class,NULL,device_number, NULL, DRIVER_NAME); //todo add error checking
+	if( device_create(device_class,NULL,device_number, NULL, DRIVER_NAME) == NULL)
+	{
+		printk(KERN_WARNING"Could not create the device");
+		class_destroy(device_class);
+		unregister_chrdev(device_number,DRIVER_NAME);
+		return -1;
+	}
 
+		//Initialise device file 
+	cdev_init(&device_itself,&file_ops);
 	
-	
+	// Register the device file
+	if (cdev_add(&device_itself,device_number,1) == NULL)
+	{
+		printk(KERN_WARNING"Could not register thge device file");
+		device_destroy(device_class, device_number);
+		class_destroy(device_class);
+		unregister_chrdev(device_number, DRIVER_NAME);
+		return -1;
+	}
+
 
     printk("piirq loaded\n");
     return 0;
