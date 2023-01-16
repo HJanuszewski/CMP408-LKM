@@ -25,11 +25,12 @@ api = {
     'Address1' : "",
     'TTL1' : 0
     }
+
 apiURL = ""
 cpu = CPUsage()
 
-LOG_BUCKET_NAME = 'cmp408test'
-AUTO_SCALING_GROUP_NAME = "MyScaler"
+LOG_BUCKET_NAME = 'cmp408LogBucket'
+AUTO_SCALING_GROUP_NAME = "HybridScaler"
 IS_CLOUD_LIVE = False
 ELB_URL = "www.aws-fill-me-later.com"
 LOCAL_IP = ""
@@ -195,13 +196,11 @@ def startCloud():
         IS_CLOUD_LIVE = True
         print("Starting the cloud")
         setDNStoAWSELB() # change the DNS record to point to the Elastic Load Balancer
-
         # set the Auto Scaling Group's Desired capacity to 1 (from the resting state of 0)
         scaler = boto3.client('autoscaling')
         response = scaler.set_desired_capacity(AutoScalingGroupName=AUTO_SCALING_GROUP_NAME,DesiredCapacity=1)
         # start the alert watching thread, in order to terminate cloud when no longer necessary (1 instance live and low CPU% on it
-        AlertWatching = threading.Thread(target=alertWatchingThread,args=()) #create and start the thread that can stop the cloud
-        AlertWatching.start()
+     
     return
 
 def main():
@@ -211,7 +210,6 @@ def main():
         print("Usage: userApp.py [1,5,15]") # provide an error message if no arguments were specified (or too many were specified)
         return -1
     else:
-        print("testing")
         setupDNSAPI()
         actionLoop(int(args[1]))
    
