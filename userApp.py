@@ -32,11 +32,12 @@ LOG_BUCKET_NAME = 'cmp408test'
 AUTO_SCALING_GROUP_NAME = "MyScaler"
 IS_CLOUD_LIVE = False
 ELB_URL = "www.aws-fill-me-later.com"
-LOCAL_IP = "82.40.72.174"
+LOCAL_IP = ""
 
 def setupDNSAPI():
     global api
     global apiURL
+    global LOCAL_IP
     file = open("./.APIcreds","r") # it is not good secure to leave API keys in code, thus they will be read from a file at runtime
     string = file.read()
     file.close()
@@ -48,6 +49,7 @@ def setupDNSAPI():
     api['username'] = split[3]
     api['Command'] = split[4]
     api['ClientIp'] = split[5]
+    LOCAL_IP = split[5]
     api['SLD'] = split[6]
     api['TLD'] = split[7]
     api['HostName1'] = split[8]
@@ -198,7 +200,8 @@ def startCloud():
         scaler = boto3.client('autoscaling')
         response = scaler.set_desired_capacity(AutoScalingGroupName=AUTO_SCALING_GROUP_NAME,DesiredCapacity=1)
         # start the alert watching thread, in order to terminate cloud when no longer necessary (1 instance live and low CPU% on it
-     
+        AlertWatching = threading.Thread(target=alertWatchingThread,args=()) #create and start the thread that can stop the cloud
+        AlertWatching.start()
     return
 
 def main():

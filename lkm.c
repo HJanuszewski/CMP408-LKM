@@ -245,6 +245,6 @@ void __exit piirq_exit(void){
 module_init(piirq_init);
 module_exit(piirq_exit);
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Hubert Januszewski CMP408");
+MODULE_AUTHOR("Hubert Januszewski CMP408"); // the piirq lab example was used as a starting point, other references can be found in the report
 MODULE_DESCRIPTION("Module for CPU utilisation display using LEDs and hybrid cloud control");
 MODULE_VERSION("0.1");
