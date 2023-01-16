@@ -212,7 +212,6 @@ def main():
         print("Usage: userApp.py [1,5,15]") # provide an error message if no arguments were specified (or too many were specified)
         return -1
     else:
-        print("testing")
         setupDNSAPI()
         actionLoop(int(args[1]))
    

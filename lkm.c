@@ -134,7 +134,7 @@ static struct file_operations file_ops = {
 };
 
 // Interrupt handler
-static irq_handler_t irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
+static irq_handler_t BTN_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
     /* Toogle LED */
    gpio_set_value(OffLed, IsEnabled); // set the LED to the opposite of the function state (LED is ON when cloud func is OFF)
    IsEnabled = !IsEnabled; // enable or disable the cloud functionality
@@ -182,7 +182,7 @@ int __init module_start(void){
 
     	Irqnum = gpio_to_irq(Button);
     	
- 	 result = request_irq(Irqnum,(irq_handler_t) irq_handler,IRQF_TRIGGER_RISING,"irq_handler",NULL);
+ 	 result = request_irq(Irqnum,(irq_handler_t) BTN_irq_handler,IRQF_TRIGGER_RISING,"BTN_irq_handler",NULL);
 
 	// Get the device number assigned and create the dev file for interacting with the userspace 
 	if (alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME) < 0)
