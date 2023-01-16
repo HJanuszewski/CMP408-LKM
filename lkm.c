@@ -32,8 +32,8 @@ static dev_t device_number;
 static struct class *device_class;
 static struct cdev device_itself;
 
-#define DRIVER_NAME "cloudLED"
-#define DRIVER_CLASS "cloudLEDClass"
+#define DRIVER_NAME "HybridCloud"
+#define DRIVER_CLASS "HybridCloudClass"
 
 
 //Function to set the correct LEDs on and off based on the last reported value
@@ -173,11 +173,11 @@ int __init piirq_init(void){
 	int result = 0;
     pr_info("%s\n", __func__);
     /* https://www.kernel.org/doc/Documentation/pinctrl.txt */
-	printk("piirq: IRQ Test");
-    printk(KERN_INFO "piirq: Initializing driver\n");
+
+    printk(KERN_INFO "HybridCloud: Initializing driver\n");
 
     if (!gpio_is_valid(OffLed) || !gpio_is_valid(GreenLed) || !gpio_is_valid(YellowLed) || !gpio_is_valid(RedLed)){
-    	printk(KERN_INFO "piirq: invalid GPIO\n");
+    	printk(KERN_INFO "HybridCloud: invalid GPIO\n");
     return -ENODEV;
    }
 
@@ -194,7 +194,7 @@ int __init piirq_init(void){
 
 
     	Irqnum = gpio_to_irq(Button);
-    	printk(KERN_INFO "piirq: The button is mapped to IRQ: %d\n", Irqnum);
+    	printk(KERN_INFO "HybridCloud: The button is mapped to IRQ: %d\n", Irqnum);
 
  	 result = request_irq(Irqnum,
 		  (irq_handler_t) piirq_irq_handler, /* pointer to the IRQ handler method */
@@ -204,7 +204,7 @@ int __init piirq_init(void){
 
 	// Get the device number assigned and create the dev file for interacting with the userspace 
 	alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME); //todo add error checking 
-	printk("hopefully device was created with the numbers");
+	printk("device numbers were allocated");
 
 	//Initialise device file 
 	cdev_init(&device_itself,&file_ops); //todo add error checking
@@ -221,7 +221,7 @@ int __init piirq_init(void){
 	
 	
 
-    printk("piirq loaded\n");
+    printk("HybridCloud loaded\n");
     return 0;
 }
 void __exit piirq_exit(void){
@@ -240,7 +240,7 @@ void __exit piirq_exit(void){
 	unregister_chrdev(device_number, DRIVER_NAME);
 
 
-	printk("piirq unloaded\n");
+	printk("HybridCloud unloaded\n");
 }
 module_init(piirq_init);
 module_exit(piirq_exit);

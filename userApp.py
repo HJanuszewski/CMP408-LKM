@@ -62,14 +62,14 @@ def setupDNSAPI():
 # 1 - on 
 # 0 - off
 def readDecision():
-    dev = open("/dev/cloudLED","r")
+    dev = open("/dev/HybridCloud","r")
     decision = dev.read(2)
     dev.close()
     return decision
 
 # this function will write the CPU usage percentage to the dev file, informing the LKM of it
 def writeUtilisation(percentage):
-    dev = open("/dev/cloudLED","w")
+    dev = open("/dev/HybridCloud","w")
     dev.write(percentage)
     dev.close
     return
