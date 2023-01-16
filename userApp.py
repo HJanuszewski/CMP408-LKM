@@ -4,7 +4,6 @@ import sys #required for CLI arguments
 import threading #for logging and alert checking threads
 import time  #for sleep 
 import requests # for calls to the namecheap API
-from pprint import pprint
 
 # class to neatly store all three values fronm the /proc/loadavg file
 class CPUsage:
