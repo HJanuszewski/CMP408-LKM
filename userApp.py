@@ -1,8 +1,10 @@
-import sys #required for CLI arguments
 import boto3 #AWS SDK
-import time  #for sleep 
 import datetime #for timestamps
+import sys #required for CLI arguments
 import threading #for logging and alert checking threads
+import time  #for sleep 
+import requests # for calls to the namecheap API
+
 
 # class to neatly store all three values fronm the /proc/loadavg file
 class CPUsage:
@@ -10,9 +12,23 @@ class CPUsage:
     FiveMinutes = 0
     FifteenMinutes = 0
 
+#class containing fields necessary for Namechaeap API
+class NCAPI:
+    apiuser = ""
+    apikey = ""
+    username = ""
+    Command = ""
+    ClientIp = ""
+    SLD = ""
+    TLD = ""
+    HostName1 = ""
+    RecordType = ""
+    Address1 = ""
+    TTL1 = 0
 
 
 cpu = CPUsage()
+api = NCAPI()
 LOG_BUCKET_NAME = 'cmp408test'
 AUTO_SCALING_GROUP_NAME = "MyScaler"
 IS_CLOUD_LIVE = False
@@ -88,6 +104,8 @@ def actionLoop(mins):
 
 def setDNStoAWSELB():
     print("sending the request to change the DNS record")
+    url = "https://api.namecheap.com/xml.response"
+
     #do stuff
     return
 
