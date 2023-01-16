@@ -22,7 +22,7 @@ api = {
     'SLD' : "",
     'TLD' : "",
     'HostName1' : "",
-    'RecordType' : "",
+    'RecordType1' : "",
     'Address1' : "",
     'TTL1' : 0
     }
@@ -32,7 +32,7 @@ cpu = CPUsage()
 LOG_BUCKET_NAME = 'cmp408test'
 AUTO_SCALING_GROUP_NAME = "MyScaler"
 IS_CLOUD_LIVE = False
-ELB_URL = "http://aws-fill-me-later.com"
+ELB_URL = "www.aws-fill-me-later.com"
 LOCAL_IP = "82.40.72.174"
 
 def setupDNSAPI():
@@ -52,7 +52,7 @@ def setupDNSAPI():
     api['SLD'] = split[6]
     api['TLD'] = split[7]
     api['HostName1'] = split[8]
-    api['RecordType'] = split[9]
+    api['RecordType1'] = split[9]
     api['Address1'] = split[10]
     api['TTL1'] = split[11]
     return
@@ -128,18 +128,20 @@ def setDNStoAWSELB():
     print("sending the request to change the DNS record")
     global api
     global ELB_URL
-    api["RecordType"] = "CNAME"
+    api["RecordType1"] = "CNAME"
     api["Address1"] = ELB_URL
-    req = requests.get(url = apiURL, params = api)
+    req = requests.post(url = apiURL, params = api)
+    print(req.text)
     return
 
 def setDNStoRPI():
     print("setting the DNS record back to the RPI")
     global api
     global LOCAL_IP
-    api["RecordType"] = "A"
+    api["RecordType1"] = "A"
     api["Address1"] = LOCAL_IP
-    req = requests.get(url = apiURL, params = api)
+    req = requests.post(url = apiURL, params = api)
+    print(req.text)
     return 
 
 def writeLogDaemonThread():
@@ -196,8 +198,8 @@ def startCloud():
         # set the Auto Scaling Group's Desired capacity to 1 (from the resting state of 0)
         scaler = boto3.client('autoscaling')
         response = scaler.set_desired_capacity(AutoScalingGroupName=AUTO_SCALING_GROUP_NAME,DesiredCapacity=1)
-        # start the alert watching thread, in order to terminate cloud when no longer necessary (1 instance live and low CPU% on it)
-
+        # start the alert watching thread, in order to terminate cloud when no longer necessary (1 instance live and low CPU% on it
+     
     return
 
 def main():
@@ -208,13 +210,9 @@ def main():
         return -1
     else:
         print("testing")
-        #actionLoop(int(args[1]))
         setupDNSAPI()
-        pprint(vars(api))
-        
-    # either start the loop from here, or use a thread to do it instead
-       
-
+        actionLoop(int(args[1]))
+   
 
 if __name__ == "__main__":
     main()
