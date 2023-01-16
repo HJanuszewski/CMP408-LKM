@@ -6,22 +6,17 @@
 #include <linux/uaccess.h>
 
 // Values of the GPIO pins and initialisation for variables
-
-
-
-
 static unsigned int OffLed = 27;
 static unsigned int GreenLed = 14;
 static unsigned int YellowLed = 15;
 static unsigned int RedLed = 4;
-
 static unsigned int Button = 17;
-static unsigned int Irqnum = 0;
-static unsigned int Counter = 0;
 
- long LastReportedValue = 0;
+static unsigned int Irqnum = 0;
+
+
+long LastReportedValue = 0;
 bool IsEnabled = 0;
-unsigned int Response = 0; // This could be a bool??
 
 //buffer for the interaction between the user and the dev file
 static char buffer[255];
@@ -32,8 +27,8 @@ static dev_t device_number;
 static struct class *device_class;
 static struct cdev device_itself;
 
-#define DRIVER_NAME "cloudLED"
-#define DRIVER_CLASS "cloudLEDClass"
+#define DRIVER_NAME "CPULED"
+#define DRIVER_CLASS "CPULED"
 
 
 //Function to set the correct LEDs on and off based on the last reported value
@@ -66,7 +61,6 @@ void setLEDValues(void)
 
 }
 
-
 // Function for handling the dev file being opened
 static int user_opened_the_file(struct inode *dev_file, struct file *instance)
 {
@@ -81,12 +75,9 @@ static int user_closed_the_file(struct inode *dev_file, struct file *instance)
 	return 0;
 }
 
-
 //Function for handling reads of the device file
 static ssize_t user_read_the_file(struct file *dev_file, char *destination_buffer, size_t size_of_buffer, loff_t *offset)
 {
-
-	// todo redo it to also include the reported value
 
 	char Decision = 0;	
 	if (LastReportedValue > 75 && IsEnabled )
@@ -103,7 +94,7 @@ static ssize_t user_read_the_file(struct file *dev_file, char *destination_buffe
 		//Write a 0 back to the user application, nothing should happen afterwards
 	
 	}
-	static char result_buf[255] ;
+	static char result_buf[255];
 	result_buf[1] = Decision;
 	copy_to_user(destination_buffer,result_buf,sizeof(result_buf));
 	return sizeof(result_buf);
@@ -130,10 +121,7 @@ static ssize_t user_wrote_the_file(struct file *dev_file, const char *source_buf
 
 }
 
-
-
 // This struct maps the functions we wrote to the operations that can be done on the dev file
-
 static struct file_operations file_ops = {
 	.owner = THIS_MODULE,
 	// pointing which of our functions should be called when dev file is interacted with
@@ -144,10 +132,8 @@ static struct file_operations file_ops = {
 	
 };
 
-
-
 // Interrupt handler
-static irq_handler_t piirq_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
+static irq_handler_t BTN_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
     /* Toogle LED */
    gpio_set_value(OffLed, IsEnabled); // set the LED to the opposite of the function state (LED is ON when cloud func is OFF)
    IsEnabled = !IsEnabled; // enable or disable the cloud functionality
@@ -169,20 +155,20 @@ void close_single_gpio(unsigned int pin)
    gpio_free(pin);
 }
 
-int __init piirq_init(void){
+int __init module_start(void){
 	int result = 0;
     pr_info("%s\n", __func__);
     /* https://www.kernel.org/doc/Documentation/pinctrl.txt */
-	printk("piirq: IRQ Test");
-    printk(KERN_INFO "piirq: Initializing driver\n");
+	printk("CLOUDLED: IRQ Test");
+    printk(KERN_INFO "CLOUDLED: Initializing driver\n");
 
     if (!gpio_is_valid(OffLed) || !gpio_is_valid(GreenLed) || !gpio_is_valid(YellowLed) || !gpio_is_valid(RedLed)){
-    	printk(KERN_INFO "piirq: invalid GPIO\n");
+    	printk(KERN_INFO "CLOUDLED: invalid GPIO\n");
     return -ENODEV;
    }
 
 	/* Make it appear in /sys/class/gpio/gpio16 for echo 0 > value */
-    	init_single_gpio(OffLed,"OffLed",1);
+    init_single_gpio(OffLed,"OffLed",1);
 	init_single_gpio(GreenLed,"GreenLed",0);
 	init_single_gpio(YellowLed,"YellowLed",0);
 	init_single_gpio(RedLed,"RedLed",0);
@@ -194,37 +180,51 @@ int __init piirq_init(void){
 
 
     	Irqnum = gpio_to_irq(Button);
-    	printk(KERN_INFO "piirq: The button is mapped to IRQ: %d\n", Irqnum);
-
- 	 result = request_irq(Irqnum,
-		  (irq_handler_t) piirq_irq_handler, /* pointer to the IRQ handler method */
-		  IRQF_TRIGGER_RISING,
-		  "piirq_handler",    /* See this string from user console to identify: cat /proc/interrupts */
-		  NULL);
+    	
+ 	 result = request_irq(Irqnum,(irq_handler_t) BTN_irq_handler,IRQF_TRIGGER_RISING,"BTN_irq_handler",NULL);
 
 	// Get the device number assigned and create the dev file for interacting with the userspace 
-	alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME); //todo add error checking 
-	printk("hopefully device was created with the numbers");
-
-	//Initialise device file 
-	cdev_init(&device_itself,&file_ops); //todo add error checking
-
-	// Register the device file
-	cdev_add(&device_itself,device_number,1); //todo add error checking
+	if (alloc_chrdev_region(&device_number, 0, 1, DRIVER_NAME) < 0)
+	{
+		printk(KERN_WARNING"Error occured when assigning device number");
+		return -1;
+	} 
 
 	//Create the device class
-	device_class = class_create(THIS_MODULE,DRIVER_CLASS); // todo add error checking
-
+	device_class = class_create(THIS_MODULE,DRIVER_CLASS); 
+	if (device_class == NULL)
+	{
+		printk(KERN_WARNING"The class was not registered properly");
+		unregister_chrdev(device_number,DRIVER_NAME);
+		return -1;
+	}
 	//Create the device file itself
-	device_create(device_class,NULL,device_number, NULL, DRIVER_NAME); //todo add error checking
+	if( device_create(device_class,NULL,device_number, NULL, DRIVER_NAME) == NULL)
+	{
+		printk(KERN_WARNING"Could not create the device");
+		class_destroy(device_class);
+		unregister_chrdev(device_number,DRIVER_NAME);
+		return -1;
+	}
 
+		//Initialise device file 
+	cdev_init(&device_itself,&file_ops);
 	
-	
+	// Register the device file
+	if (cdev_add(&device_itself,device_number,1) == NULL)
+	{
+		printk(KERN_WARNING"Could not register thge device file");
+		device_destroy(device_class, device_number);
+		class_destroy(device_class);
+		unregister_chrdev(device_number, DRIVER_NAME);
+		return -1;
+	}
 
-    printk("piirq loaded\n");
+
+    printk("module loaded\n");
     return 0;
 }
-void __exit piirq_exit(void){
+void __exit module_cleanup(void){
    
 	close_single_gpio(OffLed);
 	close_single_gpio(RedLed);
@@ -240,11 +240,11 @@ void __exit piirq_exit(void){
 	unregister_chrdev(device_number, DRIVER_NAME);
 
 
-	printk("piirq unloaded\n");
+	printk("Module removed\n");
 }
-module_init(piirq_init);
-module_exit(piirq_exit);
+module_init(module_start);
+module_exit(module_cleanup);
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Hubert Januszewski CMP408"); // the piirq lab example was used as a starting point, other references can be found in the report
+MODULE_AUTHOR("Hubert Januszewski CMP408"); //piirq.c lab example was used as a starting point, other references can be found in the report
 MODULE_DESCRIPTION("Module for CPU utilisation display using LEDs and hybrid cloud control");
 MODULE_VERSION("0.1");
