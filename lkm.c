@@ -133,7 +133,7 @@ static struct file_operations file_ops = {
 };
 
 // Interrupt handler
-static irq_handler_t BTN_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
+static irq_handler_t piirq_irq_handler(unsigned int irq, void *dev_id, struct pt_regs *regs){
     /* Toogle LED */
    gpio_set_value(OffLed, IsEnabled); // set the LED to the opposite of the function state (LED is ON when cloud func is OFF)
    IsEnabled = !IsEnabled; // enable or disable the cloud functionality

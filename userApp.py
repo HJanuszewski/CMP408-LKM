@@ -29,10 +29,10 @@ api = {
 apiURL = ""
 cpu = CPUsage()
 
-LOG_BUCKET_NAME = 'cmp408LogBucket'
+LOG_BUCKET_NAME = 'cmp408logbucket'
 AUTO_SCALING_GROUP_NAME = "HybridScaler"
 IS_CLOUD_LIVE = False
-ELB_URL = "www.aws-fill-me-later.com"
+ELB_URL = "Main-Load-Balancer-1339740731.us-east-1.elb.amazonaws.com"
 LOCAL_IP = ""
 
 def setupDNSAPI():
@@ -119,10 +119,10 @@ def actionLoop(mins):
                 print("Wrote utilisation!")
         decision = readDecision()
         if ("1" in decision):
-            print("do stuff \n")
+            print("cloud is needed \n")
             startCloud()
         else:
-            print("don't do stuff")
+            print("cloud is not needed")
         time.sleep(10) # only activcate once every 10 secs
 
 
@@ -200,7 +200,9 @@ def startCloud():
         scaler = boto3.client('autoscaling')
         response = scaler.set_desired_capacity(AutoScalingGroupName=AUTO_SCALING_GROUP_NAME,DesiredCapacity=1)
         # start the alert watching thread, in order to terminate cloud when no longer necessary (1 instance live and low CPU% on it
-     
+        CloudWatching = threading.Thread(target=alertWatchingThread,args=())
+        CloudWatching.start()
+        
     return
 
 def main():
